@@ -16,27 +16,3 @@ Arduino sketch for obtaining and publishing ultrasonic sensor data.
 
 
 
-
-## Data Flow Diagram
-
-
-
-```mermaid
-
-sequenceDiagram
-
-Ultrasonic Sensors -> NodeMCU: Height information
-
-NodeMCU ->> Mosquitto MQTT Broker: Height updates over time
-
-Mosquitto MQTT Broker ->> Node Red: Height updates over time
-
-Node Red ->> Mosquitto MQTT Broker: Request for current height
-
-Mosquitto MQTT Broker ->> NodeMCU: Request for current height
-
-
-
-
-```
-
