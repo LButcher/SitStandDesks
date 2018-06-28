@@ -34,6 +34,8 @@ const char* mqttServer = "192.168.1.101";
 const int mqttPort = 1883;
 const char* clientName = "DeskNode8";
 const char* topic_pub = "Desks/DeskNode8";    //write to this topic
+const char* topic_pub2 = "Desks/DeskNode8req";    //write to this topic
+
 const char* topic_sub = "Desks/DeskNode8/sub";  //listen to this topic
 
 
@@ -134,7 +136,7 @@ void callback(char* topic, byte* payload, unsigned int length2){
     JSONencoder["previousRecordedHeight"] = lastHeight;
     char JSONmessageBuffer[100];
     JSONencoder.printTo(JSONmessageBuffer, sizeof(JSONmessageBuffer));
-    client.publish(topic_pub, JSONmessageBuffer);
+    client.publish(topic_pub2, JSONmessageBuffer);
   }
          
 }
