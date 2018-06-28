@@ -288,11 +288,11 @@ int getHeight() {
     distance1 = duration1 * 0.034 / 2;
     distance2 = duration2 * 0.034 / 2;
     // Prints the distance on the Serial Monitor
- /*   Serial.println("dist1");
+    Serial.println("dist1");
     Serial.println(distance1);
     Serial.println("dist2");
     Serial.println(distance2);
-*/
+
     if (distance1 >= distance2) {
       realDistance = distance1;
     }
