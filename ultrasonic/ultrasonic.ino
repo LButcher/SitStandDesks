@@ -1,3 +1,4 @@
+/*************************Headers***************************/
 #include <Time.h>
 #include <TimeLib.h>
 #include <RunningMedian.h>
@@ -10,8 +11,8 @@
 #define MQTT_KEEPALIVE 60
 
 // defines pins numbers
-const int trigPin1 = D8;
-const int echoPin1 = D7;  
+const int trigPin1 = D4;
+const int echoPin1 = D3;  
 const int trigPin2 = D6;
 const int echoPin2 = D5;
 // defines variables
@@ -19,49 +20,55 @@ long duration1;
 long duration2;
 int distance1;
 int distance2;
-
-int threshold = 6;
+int threshold = 3;    //deadband to ignore changes
 int baseline;
-
 int lastHeight;
 int prevLastHeight;
 int prevNewHeight;
 unsigned long lastMeasure;
 unsigned long newMeasure;
-
 int delayval = 100; 
-
-const char* ssid = "181BayCRETech";
-const char* password = "LetsGoRaptors!";
-
-const char* mqttServer = "192.168.0.11";
+const char* ssid = "CNN";
+const char* password = "Co!!eenandNei!";
+const char* mqttServer = "192.168.1.101";
 const int mqttPort = 1883;
 const char* clientName = "DeskNode8";
-const char* topic = "Desks/DeskNode8";
+const char* topic_pub = "Desks/DeskNode8";    //write to this topic
+const char* topic_sub = "Desks/DeskNode8/sub";  //listen to this topic
 
 
-WiFiClient espClient;
-PubSubClient client(espClient);
+WiFiClient espClient;         //wifi client
+PubSubClient client(espClient); //MQTT client requires wifi client
 
+/****************setup wifi************************************/
+void setup_wifi() {
 
-void ConnectWifi(const char* ssid, const char* password)
-{
-  WiFi.begin(ssid,password);
-  while (WiFi.status()!=WL_CONNECTED)
-  {
+  delay(10);
+  // We start by connecting to a WiFi network
+  Serial.println();
+  Serial.print("Connecting to ");
+  Serial.println(ssid);
+
+  WiFi.begin(ssid, password);
+
+  while (WiFi.status() != WL_CONNECTED) {
     delay(500);
-    Serial.println("Connecting to Wifi..");
+    Serial.print(".");
   }
-  Serial.println("Connected to network");
-}
 
+  Serial.println("");
+  Serial.println("WiFi connected");
+  Serial.println("IP address: ");
+  Serial.println(WiFi.localIP());
+}
+/*****************Connect to MQTT Broker**********************************/
 void ConnectBroker(PubSubClient client, const char* clientName)
 {
     while (!client.connected())
     {
         Serial.print("Connecting to MQTT: ");
         Serial.println(clientName);
-        if(client.connect(clientName))
+        if(client.connect(clientName))      //command to connect to MQTT broker with the unique client name
         {
           Serial.println("Connected");
         }
@@ -73,7 +80,7 @@ void ConnectBroker(PubSubClient client, const char* clientName)
         }
     }
 } 
-
+/*****************reconnect to MQTT Broker if it goes down**********************************/
 void reconnect() {
   // Loop until we're reconnected
   while (!client.connected()) {
@@ -93,8 +100,13 @@ void reconnect() {
   }
 }
 
-
+/*****************MQTT Listener******************************************************/
 void callback(char* topic, byte* payload, unsigned int length2){
+  if (strcmp(topic,"Desks/DeskNode8/sub")==0)
+  {
+       Serial.print("Message arrived in topic: ");
+        Serial.println(topic);
+  }
   Serial.print("Message arrived in topic: ");
   Serial.println(topic);
 
@@ -107,9 +119,7 @@ void callback(char* topic, byte* payload, unsigned int length2){
   Serial.println();
   Serial.println("-------------");
 
-   
-
-  payload[length2] = 0;
+   payload[length2] = 0;
 
     StaticJsonBuffer<300> JSONbuffer; 
     String inData = String((char*)payload);
@@ -118,67 +128,27 @@ void callback(char* topic, byte* payload, unsigned int length2){
   String request = root["details"];
 
   if(request == "height"){
-  
+      Serial.println("-----Getting Height--------");
     JsonObject& JSONencoder = JSONbuffer.createObject();
     JSONencoder["currentHeight"] = getHeight();
     JSONencoder["previousRecordedHeight"] = lastHeight;
     char JSONmessageBuffer[100];
     JSONencoder.printTo(JSONmessageBuffer, sizeof(JSONmessageBuffer));
-    client.publish(topic, JSONmessageBuffer);
+    client.publish(topic_pub, JSONmessageBuffer);
   }
          
 }
 
+
+/*****************checks for speed of measurements******************************************************/
 unsigned long msDifference(){
   
   int timeDiff = newMeasure-lastMeasure;
   return timeDiff;
 }
 
-void setup() {
-  pinMode(trigPin1, OUTPUT); // Sets the trigPin as an Output
-  pinMode(echoPin1, INPUT); // Sets the echoPin as an Input
-  pinMode(trigPin2, OUTPUT); // Sets the trigPin as an Output
-  pinMode(echoPin2, INPUT); // Sets the echoPin as an Input
-  Serial.begin(115200);
-  
-  ConnectWifi(ssid,password);
-  client.setServer(mqttServer,mqttPort);
-  ConnectBroker(client, clientName);
-  client.setCallback(callback);
-  client.subscribe(topic);
-  // (timezone, daylight offset in seconds, server1, server2)
-  // 3*3600 as setTimezone function converts seconds to hours
-  configTime(3 * 3600, 0, "pool.ntp.org", "time.nist.gov");
-  lastMeasure = millis();
-  ////////////
 
 
-  
-   Serial.println("\nWaiting for time");
-  while (!time(nullptr)) {
-    Serial.print(".");
-    delay(250);
-  }
-  Serial.println("Configured time.");
-
-  ///
-    /// Don't know why but it disconnects often without multiple client.loop() even with increased keepalive time
-  ///
-  client.loop();
-    delay(2000);
-    Serial.println("Getting current time");
-    client.loop();
-      sendStartupMessage();
-    client.loop();
-      Serial.print("Getting Baseline");
-      makeBaseline();
-      client.loop();
-
-
-
-  
-}
 
 void sendStartupMessage(){
   
@@ -193,23 +163,12 @@ void sendStartupMessage(){
   JSONencoder["startuptime"] = now;
   char JSONmessageBuffer[100];
   JSONencoder.printTo(JSONmessageBuffer, sizeof(JSONmessageBuffer));
-  client.publish(topic, JSONmessageBuffer, false);
+  client.publish(topic_pub, JSONmessageBuffer, false);
 }
 
 
 
 
-void loop() {
-  if (!client.connected()) {
-    reconnect();
-    client.subscribe(topic);
-  }
-
-  checkHeight();
-  client.loop();
-  delay(10);
-
-}
 
 void checkHeight() {
   if (!lastHeight) {
@@ -256,6 +215,22 @@ void makeBaseline() {
   lastMeasure = millis();
   Serial.println("Baseline: ");
   Serial.println(baseline);
+
+
+/*
+StaticJsonBuffer<300> JSONbuffer;
+  JsonObject& JSONencoder = JSONbuffer.createObject();
+  JSONencoder["Baseline"] = baseline;
+  char JSONmessageBuffer[200];
+  JSONencoder.printTo(JSONmessageBuffer, sizeof(JSONmessageBuffer));
+
+  
+ client.publish(topic_pub, JSONmessageBuffer, false);
+*/
+
+
+
+  
 }
 
 int getHeight() {
@@ -327,7 +302,68 @@ void sendHeight(int oldHeight, int newHeight) {
   JSONencoder.printTo(JSONmessageBuffer, sizeof(JSONmessageBuffer));
 
   
+ client.publish(topic_pub, JSONmessageBuffer, false);
+}
 
-  client.publish(topic, JSONmessageBuffer, false);
+
+/***************Setup Routine******************************************************/
+void setup() {
+  pinMode(trigPin1, OUTPUT); // Sets the trigPin as an Output
+  pinMode(echoPin1, INPUT); // Sets the echoPin as an Input
+  pinMode(trigPin2, OUTPUT); // Sets the trigPin as an Output
+  pinMode(echoPin2, INPUT); // Sets the echoPin as an Input
+  Serial.begin(115200);
+  
+  setup_wifi();
+  client.setServer(mqttServer,mqttPort);
+  ConnectBroker(client, clientName);    //connect to MQTT borker
+  client.setCallback(callback);
+  client.subscribe(topic_sub);   
+
+  
+  // (timezone, daylight offset in seconds, server1, server2)
+  // 3*3600 as setTimezone function converts seconds to hours
+  configTime(3 * 3600, 0, "pool.ntp.org", "time.nist.gov");
+  lastMeasure = millis();
+  ////////////
+
+
+  
+   Serial.println("\nWaiting for time");
+  while (!time(nullptr)) {
+    Serial.print(".");
+    delay(250);
+  }
+  Serial.println("Configured time.");
+
+  ///
+    /// Don't know why but it disconnects often without multiple client.loop() even with increased keepalive time
+  ///
+  client.loop();
+    delay(2000);
+    Serial.println("Getting current time");
+    client.loop();
+      sendStartupMessage();
+      
+    client.loop();
+      Serial.print("Getting Baseline");
+      makeBaseline();
+      client.loop();
+ 
+
+
+  
+}
+
+void loop() {
+  if (!client.connected()) {
+    reconnect();
+    client.subscribe(topic_sub);
+  }
+
+  checkHeight();
+  client.loop();
+  delay(10);
+
 }
 
