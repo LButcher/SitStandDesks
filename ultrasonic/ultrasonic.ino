@@ -37,7 +37,8 @@ const char* password = "LetsGoRaptors!";
 const char* mqttServer = "192.168.0.11";
 const int mqttPort = 1883;
 const char* clientName = "DeskNode8";
-const char* topic = "Desks/DeskNode8";
+const char* subscribeTopic = "Status/DeskNode8";
+const char* publishTopic = "Desks/DeskNode8";
 
 
 WiFiClient espClient;
@@ -124,7 +125,7 @@ void callback(char* topic, byte* payload, unsigned int length2){
     JSONencoder["previousRecordedHeight"] = lastHeight;
     char JSONmessageBuffer[100];
     JSONencoder.printTo(JSONmessageBuffer, sizeof(JSONmessageBuffer));
-    client.publish(topic, JSONmessageBuffer);
+    client.publish(publishTopic, JSONmessageBuffer);
   }
          
 }
@@ -146,7 +147,7 @@ void setup() {
   client.setServer(mqttServer,mqttPort);
   ConnectBroker(client, clientName);
   client.setCallback(callback);
-  client.subscribe(topic);
+  client.subscribe(subscribeTopic);
   // (timezone, daylight offset in seconds, server1, server2)
   // 3*3600 as setTimezone function converts seconds to hours
   configTime(3 * 3600, 0, "pool.ntp.org", "time.nist.gov");
@@ -193,7 +194,7 @@ void sendStartupMessage(){
   JSONencoder["startuptime"] = now;
   char JSONmessageBuffer[100];
   JSONencoder.printTo(JSONmessageBuffer, sizeof(JSONmessageBuffer));
-  client.publish(topic, JSONmessageBuffer, false);
+  client.publish(publishTopic, JSONmessageBuffer, false);
 }
 
 
@@ -202,7 +203,7 @@ void sendStartupMessage(){
 void loop() {
   if (!client.connected()) {
     reconnect();
-    client.subscribe(topic);
+    client.subscribe(subscribeTopic);
   }
 
   checkHeight();
@@ -328,6 +329,6 @@ void sendHeight(int oldHeight, int newHeight) {
 
   
 
-  client.publish(topic, JSONmessageBuffer, false);
+  client.publish(publishTopic, JSONmessageBuffer, false);
 }
 
