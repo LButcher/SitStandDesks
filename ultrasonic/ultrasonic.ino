@@ -10,12 +10,14 @@
 
 #define MQTT_KEEPALIVE 60
 
+
+/************************Define Pins***************************/
 // defines pins numbers
 const int trigPin1 = D4;
 const int echoPin1 = D3;  
 const int trigPin2 = D6;
 const int echoPin2 = D5;
-// defines variables
+/*********************** Global Variables***************************/
 long duration1;
 long duration2;
 int distance1;
@@ -25,21 +27,29 @@ int baseline;
 int lastHeight;
 int prevLastHeight;
 int prevNewHeight;
+unsigned long connect_time;
+unsigned long last_update;
 unsigned long lastMeasure;
 unsigned long newMeasure;
 int delayval = 100; 
 const char* ssid = "CNN";
 const char* password = "Co!!eenandNei!";
-const char* mqttServer = "192.168.1.101";
+const char* mqttServer = "192.168.1.12";
 const int mqttPort = 1883;
 const char* clientName = "DeskNode8";
 const char* topic_pub = "Desks/DeskNode8";    //write to this topic
 const char* topic_pub2 = "Desks/DeskNode8req";    //write to this topic
 const char* topic_sub = "Desks/DeskNode8/sub";  //listen to this topic
 
-
 WiFiClient espClient;         //wifi client
 PubSubClient client(espClient); //MQTT client requires wifi client
+
+
+
+
+
+
+
 
 /****************setup wifi************************************/
 void setup_wifi() {
@@ -61,6 +71,9 @@ void setup_wifi() {
   Serial.println("WiFi connected");
   Serial.println("IP address: ");
   Serial.println(WiFi.localIP());
+  long rssi = WiFi.RSSI();
+  Serial.print("RSSI:");
+  Serial.println(rssi);
 }
 /*****************Connect to MQTT Broker**********************************/
 void ConnectBroker(PubSubClient client, const char* clientName)
@@ -105,39 +118,37 @@ void reconnect() {
 void callback(char* topic, byte* payload, unsigned int length2){
   if (strcmp(topic,"Desks/DeskNode8/sub")==0)
   {
-       Serial.print("Message arrived in topic: ");
-        Serial.println(topic);
-  }
-  Serial.print("Message arrived in topic: ");
-  Serial.println(topic);
-
-   
-  Serial.print("Message: ");
-  for(int i = 0; i<length2;i++){
-    Serial.print((char)payload[i]);
-  }
-
-  Serial.println();
-  Serial.println("-------------");
-
-   payload[length2] = 0;
-
-    StaticJsonBuffer<300> JSONbuffer; 
-    String inData = String((char*)payload);
-    JsonObject& root = JSONbuffer.parseObject(inData);
-  
-  String request = root["details"];
-
-  if(request == "height"){
-      Serial.println("-----Getting Height--------");
-    JsonObject& JSONencoder = JSONbuffer.createObject();
-    JSONencoder["currentHeight"] = getHeight();
-    JSONencoder["previousRecordedHeight"] = lastHeight;
-    char JSONmessageBuffer[100];
-    JSONencoder.printTo(JSONmessageBuffer, sizeof(JSONmessageBuffer));
-    client.publish(topic_pub2, JSONmessageBuffer);
-  }
-         
+      Serial.print("Message arrived in topic: ");
+      Serial.println(topic);
+      Serial.print("Message: ");
+      
+      for(int i = 0; i<length2;i++){
+      Serial.print((char)payload[i]);
+      }
+      Serial.println ("");
+    
+       payload[length2] = 0;
+    
+        StaticJsonBuffer<300> JSONbuffer; 
+        String inData = String((char*)payload);
+        JsonObject& root = JSONbuffer.parseObject(inData);
+      
+      String request = root["system"];
+    
+      if(request == "diagnostics"){
+        Serial.println("-----Getting Diagnostic Data--------");
+        JsonObject& JSONencoder = JSONbuffer.createObject();
+        JSONencoder["ID"] = clientName;
+        JSONencoder["Connected"] = connect_time;
+        JSONencoder["LastUpdate"] = last_update;
+        JSONencoder["WiFiSig"] = WiFi.RSSI();
+        JSONencoder["Height"] = getHeight();
+        char JSONmessageBuffer[300];
+        JSONencoder.printTo(JSONmessageBuffer, sizeof(JSONmessageBuffer));
+        client.publish(topic_pub2, JSONmessageBuffer);
+        Serial.println(JSONmessageBuffer);
+      }
+  }       
 }
 
 
@@ -154,7 +165,7 @@ unsigned long msDifference(){
 void sendStartupMessage(){
   
   time_t now = time(nullptr);
-
+  connect_time = time(nullptr);
   Serial.println("Time is now: ");
   Serial.println(now);
   
@@ -291,7 +302,8 @@ int getHeight() {
 }
 
 void sendHeight(int oldHeight, int newHeight) {
-
+  
+  last_update = time(nullptr);
   StaticJsonBuffer<300> JSONbuffer;
   JsonObject& JSONencoder = JSONbuffer.createObject();
   JSONencoder["id"] = clientName;
@@ -305,7 +317,6 @@ void sendHeight(int oldHeight, int newHeight) {
   
  client.publish(topic_pub, JSONmessageBuffer, false);
 }
-
 
 /***************Setup Routine******************************************************/
 void setup() {
