@@ -34,7 +34,7 @@ unsigned long newMeasure;
 int delayval = 100; 
 const char* ssid = "CNN";
 const char* password = "Co!!eenandNei!";
-const char* mqttServer = "192.168.1.12";
+const char* mqttServer = "192.168.1.13";
 const int mqttPort = 1883;
 const char* clientName = "DeskNode8";
 const char* topic_pub = "Desks/DeskNode8";    //write to this topic
