@@ -200,7 +200,7 @@ unsigned long msDifference(){
 }
 
 
-
+/*****************Startup Get times******************************************************/
 
 void sendStartupMessage(){
   
@@ -220,15 +220,16 @@ void sendStartupMessage(){
 
 
 
-
+/*****************checks Height for change in value******************************************************/
 
 void checkHeight() {
   if (!lastHeight) {
     lastHeight = baseline;
   }
   int newHeight = getHeight();
-  if(passesSpeedCheck(newHeight,lastHeight)){
-    if (abs(newHeight - lastHeight) >= threshold) {
+//  if(passesSpeedCheck(newHeight,lastHeight)){
+    
+//    if (abs(newHeight - lastHeight) >= threshold) {
       Serial.println("**********Sending*********");
       Serial.println("old: ");
       Serial.println(lastHeight);
@@ -241,12 +242,13 @@ void checkHeight() {
       
       
       //newMeasure = millis();
-    }
+//    }
       lastMeasure = newMeasure;
 
-  }
+//  }
 }
 
+/*****************ensures new height is reasonable ******************************************************/
 boolean passesSpeedCheck(int newHeight, int oldHeight){
   float distance = abs(newHeight-oldHeight);
   float timeDiff = msDifference();
@@ -255,7 +257,7 @@ boolean passesSpeedCheck(int newHeight, int oldHeight){
   
 }
 
-
+/*****************Startup - creates baseline (initial measurement)*********************************************/
 void makeBaseline() {
   int total = 0;
   int baseSize = 3;
@@ -280,11 +282,10 @@ StaticJsonBuffer<300> JSONbuffer;
  client.publish(topic_pub, JSONmessageBuffer, false);
 */
 
-
-
-  
+ 
 }
 
+/*****************gets height******************************************************/
 int getHeight() {
   int realDistance;
 
@@ -341,16 +342,19 @@ int getHeight() {
   return realDistance;
 }
 
+
+/*****************sends height******************************************************/
+
 void sendHeight(int oldHeight, int newHeight) {
   
   last_update = time(nullptr);
   StaticJsonBuffer<300> JSONbuffer;
   JsonObject& JSONencoder = JSONbuffer.createObject();
-  JSONencoder["id"] = clientName;
-  JSONencoder["oldheight"] = oldHeight;
-  JSONencoder["newheight"] = newHeight;
-  JSONencoder["time"] = time(nullptr);
-  JSONencoder["mscounter"] = newMeasure;
+  JSONencoder["ID"] = clientName;
+  JSONencoder["Oldheight"] = oldHeight;
+  JSONencoder["Newheight"] = newHeight;
+  JSONencoder["Time"] = time(nullptr);
+  JSONencoder["MScounter"] = newMeasure;
   char JSONmessageBuffer[200];
   JSONencoder.printTo(JSONmessageBuffer, sizeof(JSONmessageBuffer));
 
@@ -417,7 +421,7 @@ void loop() {
 
   checkHeight();
   client.loop();
-  delay(10);
+  delay(5000);
 
 }
 
