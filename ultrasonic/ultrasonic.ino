@@ -43,7 +43,6 @@ const int mqttPort = 1883;
 const char* clientName = "DeskNode2";
 const char* subscribeTopic = "Status/DeskNode2";
 const char* publishTopic = "Desks/DeskNode2";
-=======
 const char* clientName = "DeskNode8";
 const char* topic_pub = "Desks/DeskNode8";    //write to this topic
 const char* topic_pub2 = "Desks/DeskNode8req";    //write to this topic
@@ -124,7 +123,6 @@ void reconnect() {
 
 /*****************MQTT Listener******************************************************/
 void callback(char* topic, byte* payload, unsigned int length2){
-<<<<<<< HEAD:ultrasonic/ultrasonic.ino
   Serial.print("Message arrived in topic: ");
   Serial.println(topic);
 
