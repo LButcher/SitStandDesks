@@ -27,15 +27,16 @@ int movementThreshold = 10;
 
 int baseline;
 int baselineSize = 7;
-int lastHeight;
-int prevLastHeight;
-int prevNewHeight;
+int prevHeight;
+int newHeight;
 int heightCheckSize = 11;
+int chunkSize = 7;
+RunningMedian recordedHeights = RunningMedian(chunkSize);
+
+
 
 unsigned long connect_time;
 unsigned long last_update;
-unsigned long lastMeasure;
-unsigned long newMeasure;
 
 int delayval = 100; 
 
@@ -46,20 +47,12 @@ const int mqttPort = 1883;
 
 //EDIT THESE 3 VALUES
 const char* clientName = "DeskNode2";
-const char* subscribeTopic = "Status/DeskNode2";
-const char* publishTopic = "Desks/DeskNode2";
-const char* topic_pub = "Desks/DeskNode8";    //write to this topic
-const char* topic_pub2 = "Desks/DeskNode8req";    //write to this topic
-const char* topic_sub = "Desks/DeskNode8/sub";  //listen to this topic
+const char* topic_pub = "Desks/DeskNode2";    //write to this topic
+const char* topic_request_pub = "Desks/DeskNode2req";    //write to this topic
+const char* topic_sub = "Desks/DeskNode2/sub";  //listen to this topic
 
 WiFiClient espClient;         //wifi client
 PubSubClient client(espClient); //MQTT client requires wifi client
-
-
-
-
-
-
 
 
 /****************setup wifi************************************/
@@ -125,76 +118,60 @@ void reconnect() {
   }
 }
 
-/*****************MQTT Listener******************************************************/
-void callback(char* topic, byte* payload, unsigned int length2){
-  Serial.print("Message arrived in topic: ");
-  Serial.println(topic);
-
-   
-  Serial.print("Message: ");
-  for(int i = 0; i<length2;i++){
-    Serial.print((char)payload[i]);
-  }
-
-  Serial.println();
-  Serial.println("-------------");
-
-   
-
-  payload[length2] = 0;
-
-    StaticJsonBuffer<300> JSONbuffer; 
-    String inData = String((char*)payload);
-    JsonObject& root = JSONbuffer.parseObject(inData);
+/***************Setup Routine******************************************************/
+void setup() {
+  pinMode(trigPin1, OUTPUT); // Sets the trigPin as an Output
+  pinMode(echoPin1, INPUT); // Sets the echoPin as an Input
+  pinMode(trigPin2, OUTPUT); // Sets the trigPin as an Output
+  pinMode(echoPin2, INPUT); // Sets the echoPin as an Input
+  Serial.begin(115200);
   
-  String request = root["details"];
+  setup_wifi();
+  client.setServer(mqttServer,mqttPort);
+  ConnectBroker(client, clientName);    //connect to MQTT borker
+  client.setCallback(callback);
+  client.subscribe(topic_sub);   
 
-  if(request == "height"){
   
-    JsonObject& JSONencoder = JSONbuffer.createObject();
-    JSONencoder["currentHeight"] = getHeight();
-    JSONencoder["previousRecordedHeight"] = lastHeight;
-    char JSONmessageBuffer[100];
-    JSONencoder.printTo(JSONmessageBuffer, sizeof(JSONmessageBuffer));
-    client.publish(publishTopic, JSONmessageBuffer);
+  // (timezone, daylight offset in seconds, server1, server2)
+  // 3*3600 as setTimezone function converts seconds to hours
+  configTime(3 * 3600, 0, "pool.ntp.org", "time.nist.gov");
+
+
+
+  
+   Serial.println("\nWaiting for time");
+  while (!time(nullptr)) {
+    Serial.print(".");
+    delay(250);
   }
-         
-  if (strcmp(topic,"Desks/DeskNode8/sub")==0)
-  {
-      Serial.print("Message arrived in topic: ");
-      Serial.println(topic);
-      Serial.print("Message: ");
+  Serial.println("Configured time.");
+
+  ///
+    /// Don't know why but it disconnects often without multiple client.loop() even with increased keepalive time
+  ///
+  client.loop();
+    delay(2000);
+    Serial.println("Getting current time");
+    client.loop();
+      sendStartupMessage();
       
-      for(int i = 0; i<length2;i++){
-      Serial.print((char)payload[i]);
-      }
-      Serial.println ("");
-    
-       payload[length2] = 0;
-    
-        StaticJsonBuffer<300> JSONbuffer; 
-        String inData = String((char*)payload);
-        JsonObject& root = JSONbuffer.parseObject(inData);
-      
-      String request = root["system"];
-    
-      if(request == "diagnostics"){
-        Serial.println("-----Getting Diagnostic Data--------");
-        JsonObject& JSONencoder = JSONbuffer.createObject();
-        JSONencoder["ID"] = clientName;
-        JSONencoder["Connected"] = connect_time;
-        JSONencoder["LastUpdate"] = last_update;
-        JSONencoder["WiFiSig"] = WiFi.RSSI();
-        JSONencoder["Height"] = getHeight();
-        char JSONmessageBuffer[300];
-        JSONencoder.printTo(JSONmessageBuffer, sizeof(JSONmessageBuffer));
-        client.publish(topic_pub2, JSONmessageBuffer);
-        Serial.println(JSONmessageBuffer);
-      }
-  }       
+    client.loop();
+      Serial.print("Getting Baseline");
+      makeBaseline();
+      client.loop();
 }
 
-
+void makeBaseline() {
+  int total = 0;
+  RunningMedian measurements = RunningMedian(baselineSize);
+  for (int i = 0; i < baselineSize; i++) {
+    measurements.add(getHeight());
+  }
+  baseline = measurements.getMedian();
+  Serial.println("Baseline: ");
+  Serial.println(baseline); 
+}
 
 void sendStartupMessage(){
   
@@ -209,63 +186,45 @@ void sendStartupMessage(){
   JSONencoder["startuptime"] = now;
   char JSONmessageBuffer[100];
   JSONencoder.printTo(JSONmessageBuffer, sizeof(JSONmessageBuffer));
-  client.publish(publishTopic, JSONmessageBuffer, false);
-  client.publish(topic_pub, JSONmessageBuffer, false);
+  client.publish(topic_request_pub, JSONmessageBuffer, false);
 }
+
+
+void loop() {
+  if (!client.connected()) {
+    reconnect();
+    client.subscribe(topic_sub);
+  }
+
+  checkHeight();
+  client.loop();
+  delay(10);
+}
+
 
 
 void checkHeight() {
-  if (!lastHeight) {
-    lastHeight = baseline;
+  if (!prevHeight) {
+    prevHeight = baseline;
   }
-  int newHeight = getHeight();
-    if (abs(newHeight - lastHeight) >= movementThreshold) {
+  for(int i = 0; i<chunkSize;i++){
+    recordedHeights.add(getHeight());
+  }
+  int newHeight = recordedHeights.getMedian();
+    if (abs(newHeight - prevHeight) >= movementThreshold) {
       Serial.println("**********Sending*********");
       Serial.println("old: ");
-      Serial.println(lastHeight);
+      Serial.println(prevHeight);
       Serial.println("new: ");
       Serial.println(newHeight);
-      prevLastHeight = lastHeight;
-      prevNewHeight = newHeight;
-      sendHeight(lastHeight, newHeight);
-      lastHeight = newHeight;
       
-      
-      //newMeasure = millis();
-    }
-      lastMeasure = newMeasure;
+      sendHeight(prevHeight, newHeight);
+      prevHeight = newHeight;
+      }
 
   
 }
 
-
-void makeBaseline() {
-  int total = 0;
-  RunningMedian measurements = RunningMedian(5);
-  for (int i = 0; i < baselineSize; i++) {
-    measurements.add(getHeight());
-  }
-  baseline = measurements.getMedian();
-  lastMeasure = millis();
-  Serial.println("Baseline: ");
-  Serial.println(baseline);
-
-
-/*
-StaticJsonBuffer<300> JSONbuffer;
-  JsonObject& JSONencoder = JSONbuffer.createObject();
-  JSONencoder["Baseline"] = baseline;
-  char JSONmessageBuffer[200];
-  JSONencoder.printTo(JSONmessageBuffer, sizeof(JSONmessageBuffer));
-
-  
- client.publish(topic_pub, JSONmessageBuffer, false);
-*/
-
-
-
-  
-}
 
 int getHeight() {
   int realDistance;
@@ -308,17 +267,12 @@ int getHeight() {
     else {
       realDistance = distance2;
     }
-   
-
-
     measurements.add(realDistance);
   }
 
   realDistance = measurements.getMedian();
 
-  
-    newMeasure = millis();
-  
+   
   delay(150);
   return realDistance;
 }
@@ -332,7 +286,6 @@ void sendHeight(int oldHeight, int newHeight) {
   JSONencoder["oldheight"] = oldHeight;
   JSONencoder["newheight"] = newHeight;
   JSONencoder["time"] = time(nullptr);
-  JSONencoder["mscounter"] = newMeasure;
   char JSONmessageBuffer[200];
   JSONencoder.printTo(JSONmessageBuffer, sizeof(JSONmessageBuffer));
 
@@ -340,61 +293,73 @@ void sendHeight(int oldHeight, int newHeight) {
  client.publish(topic_pub, JSONmessageBuffer, false);
 }
 
-/***************Setup Routine******************************************************/
-void setup() {
-  pinMode(trigPin1, OUTPUT); // Sets the trigPin as an Output
-  pinMode(echoPin1, INPUT); // Sets the echoPin as an Input
-  pinMode(trigPin2, OUTPUT); // Sets the trigPin as an Output
-  pinMode(echoPin2, INPUT); // Sets the echoPin as an Input
-  Serial.begin(115200);
-  
-  setup_wifi();
-  client.setServer(mqttServer,mqttPort);
-  ConnectBroker(client, clientName);    //connect to MQTT borker
-  client.setCallback(callback);
-  client.subscribe(topic_sub);   
 
-  
-  // (timezone, daylight offset in seconds, server1, server2)
-  // 3*3600 as setTimezone function converts seconds to hours
-  configTime(3 * 3600, 0, "pool.ntp.org", "time.nist.gov");
-  lastMeasure = millis();
-  ////////////
+/*****************MQTT Listener******************************************************/
+void callback(char* topic, byte* payload, unsigned int length2){
+  Serial.print("Message arrived in topic: ");
+  Serial.println(topic);
 
-
-  
-   Serial.println("\nWaiting for time");
-  while (!time(nullptr)) {
-    Serial.print(".");
-    delay(250);
+   
+  Serial.print("Message: ");
+  for(int i = 0; i<length2;i++){
+    Serial.print((char)payload[i]);
   }
-  Serial.println("Configured time.");
 
-  ///
-    /// Don't know why but it disconnects often without multiple client.loop() even with increased keepalive time
-  ///
-  client.loop();
-    delay(2000);
-    Serial.println("Getting current time");
-    client.loop();
-      sendStartupMessage();
+  Serial.println();
+  Serial.println("-------------");
+
+   
+
+  payload[length2] = 0;
+
+    StaticJsonBuffer<300> JSONbuffer; 
+    String inData = String((char*)payload);
+    JsonObject& root = JSONbuffer.parseObject(inData);
+  
+  String request = root["details"];
+
+  if(request == "height"){
+  
+    JsonObject& JSONencoder = JSONbuffer.createObject();
+    JSONencoder["currentHeight"] = getHeight();
+    JSONencoder["previousRecordedHeight"] = prevHeight;
+    char JSONmessageBuffer[100];
+    JSONencoder.printTo(JSONmessageBuffer, sizeof(JSONmessageBuffer));
+    client.publish(topic_pub, JSONmessageBuffer);
+  }
+         
+  if (strcmp(topic,"Desks/DeskNode8/sub")==0)
+  {
+      Serial.print("Message arrived in topic: ");
+      Serial.println(topic);
+      Serial.print("Message: ");
       
-    client.loop();
-      Serial.print("Getting Baseline");
-      makeBaseline();
-      client.loop();
-}
-
-void loop() {
-  if (!client.connected()) {
-    reconnect();
-    client.subscribe(topic_sub);
-  }
-
-  checkHeight();
-  client.loop();
-  delay(10);
-
-//  client.publish(publishTopic, JSONmessageBuffer, false);
+      for(int i = 0; i<length2;i++){
+      Serial.print((char)payload[i]);
+      }
+      Serial.println ("");
+    
+       payload[length2] = 0;
+    
+        StaticJsonBuffer<300> JSONbuffer; 
+        String inData = String((char*)payload);
+        JsonObject& root = JSONbuffer.parseObject(inData);
+      
+      String request = root["system"];
+    
+      if(request == "diagnostics"){
+        Serial.println("-----Getting Diagnostic Data--------");
+        JsonObject& JSONencoder = JSONbuffer.createObject();
+        JSONencoder["ID"] = clientName;
+        JSONencoder["Connected"] = connect_time;
+        JSONencoder["LastUpdate"] = last_update;
+        JSONencoder["WiFiSig"] = WiFi.RSSI();
+        JSONencoder["Height"] = getHeight();
+        char JSONmessageBuffer[300];
+        JSONencoder.printTo(JSONmessageBuffer, sizeof(JSONmessageBuffer));
+        client.publish(topic_request_pub, JSONmessageBuffer);
+        Serial.println(JSONmessageBuffer);
+      }
+  }       
 }
 
