@@ -20,7 +20,7 @@ long duration2;
 int distance1;
 int distance2;
 
-int threshold = 6;
+int threshold = 10;
 int baseline;
 
 int lastHeight;
@@ -36,9 +36,11 @@ const char* password = "LetsGoRaptors!";
 
 const char* mqttServer = "192.168.0.11";
 const int mqttPort = 1883;
-const char* clientName = "DeskNode8";
-const char* subscribeTopic = "Status/DeskNode8";
-const char* publishTopic = "Desks/DeskNode8";
+
+//EDIT THESE 3 VALUES
+const char* clientName = "DeskNode2";
+const char* subscribeTopic = "Status/DeskNode2";
+const char* publishTopic = "Desks/DeskNode2";
 
 
 WiFiClient espClient;
@@ -241,7 +243,7 @@ boolean passesSpeedCheck(int newHeight, int oldHeight){
   float distance = abs(newHeight-oldHeight);
   float timeDiff = msDifference();
   float dt = 1000*(distance/timeDiff);
-    return dt<5.0;
+    return dt<4.0;
   
 }
 
