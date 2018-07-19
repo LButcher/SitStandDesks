@@ -22,12 +22,9 @@ long duration1;
 long duration2;
 int distance1;
 int distance2;
-<<<<<<< HEAD:ultrasonic/ultrasonic.ino
 
 int threshold = 10;
-=======
-int threshold = 3;    //deadband to ignore changes
->>>>>>> NJ-Test:ultrasonic/ultrasonic.ino
+float deskSpeed = 4.0;
 int baseline;
 int lastHeight;
 int prevLastHeight;
@@ -37,11 +34,10 @@ unsigned long last_update;
 unsigned long lastMeasure;
 unsigned long newMeasure;
 int delayval = 100; 
-const char* ssid = "CNN";
-const char* password = "Co!!eenandNei!";
-const char* mqttServer = "192.168.1.13";
+const char* ssid = "181BayCRETech";
+const char* password = "LetsGoRaptors!";
+const char* mqttServer = "192.168.0.11";
 const int mqttPort = 1883;
-<<<<<<< HEAD:ultrasonic/ultrasonic.ino
 
 //EDIT THESE 3 VALUES
 const char* clientName = "DeskNode2";
@@ -52,7 +48,6 @@ const char* clientName = "DeskNode8";
 const char* topic_pub = "Desks/DeskNode8";    //write to this topic
 const char* topic_pub2 = "Desks/DeskNode8req";    //write to this topic
 const char* topic_sub = "Desks/DeskNode8/sub";  //listen to this topic
->>>>>>> NJ-Test:ultrasonic/ultrasonic.ino
 
 WiFiClient espClient;         //wifi client
 PubSubClient client(espClient); //MQTT client requires wifi client
@@ -162,7 +157,6 @@ void callback(char* topic, byte* payload, unsigned int length2){
     client.publish(publishTopic, JSONmessageBuffer);
   }
          
-=======
   if (strcmp(topic,"Desks/DeskNode8/sub")==0)
   {
       Serial.print("Message arrived in topic: ");
@@ -196,7 +190,6 @@ void callback(char* topic, byte* payload, unsigned int length2){
         Serial.println(JSONmessageBuffer);
       }
   }       
->>>>>>> NJ-Test:ultrasonic/ultrasonic.ino
 }
 
 
@@ -207,7 +200,6 @@ unsigned long msDifference(){
   return timeDiff;
 }
 
-<<<<<<< HEAD:ultrasonic/ultrasonic.ino
 void setup() {
   pinMode(trigPin1, OUTPUT); // Sets the trigPin as an Output
   pinMode(echoPin1, INPUT); // Sets the echoPin as an Input
@@ -247,8 +239,7 @@ void setup() {
       Serial.print("Getting Baseline");
       makeBaseline();
       client.loop();
-=======
->>>>>>> NJ-Test:ultrasonic/ultrasonic.ino
+
 
 
 
@@ -265,17 +256,13 @@ void sendStartupMessage(){
   JSONencoder["startuptime"] = now;
   char JSONmessageBuffer[100];
   JSONencoder.printTo(JSONmessageBuffer, sizeof(JSONmessageBuffer));
-<<<<<<< HEAD:ultrasonic/ultrasonic.ino
   client.publish(publishTopic, JSONmessageBuffer, false);
-=======
   client.publish(topic_pub, JSONmessageBuffer, false);
->>>>>>> NJ-Test:ultrasonic/ultrasonic.ino
 }
 
 
 
 
-<<<<<<< HEAD:ultrasonic/ultrasonic.ino
 void loop() {
   if (!client.connected()) {
     reconnect();
@@ -287,8 +274,7 @@ void loop() {
   delay(10);
 
 }
-=======
->>>>>>> NJ-Test:ultrasonic/ultrasonic.ino
+
 
 void checkHeight() {
   if (!lastHeight) {
@@ -319,7 +305,7 @@ boolean passesSpeedCheck(int newHeight, int oldHeight){
   float distance = abs(newHeight-oldHeight);
   float timeDiff = msDifference();
   float dt = 1000*(distance/timeDiff);
-    return dt<4.0;
+    return dt<deskSpeed;
   
 }
 
@@ -485,9 +471,6 @@ void loop() {
   client.loop();
   delay(10);
 
-<<<<<<< HEAD:ultrasonic/ultrasonic.ino
   client.publish(publishTopic, JSONmessageBuffer, false);
-=======
->>>>>>> NJ-Test:ultrasonic/ultrasonic.ino
 }
 
