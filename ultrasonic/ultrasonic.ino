@@ -13,8 +13,8 @@
 
 /************************Define Pins***************************/
 // defines pins numbers
-const int trigPin1 = D4;
-const int echoPin1 = D3;  
+const int trigPin1 = D8;
+const int echoPin1 = D7;  
 const int trigPin2 = D6;
 const int echoPin2 = D5;
 /*********************** Global Variables***************************/
@@ -23,17 +23,22 @@ long duration2;
 int distance1;
 int distance2;
 
-int threshold = 10;
-float deskSpeed = 4.0;
+int movementThreshold = 10;
+
 int baseline;
+int baselineSize = 7;
 int lastHeight;
 int prevLastHeight;
 int prevNewHeight;
+int heightCheckSize = 11;
+
 unsigned long connect_time;
 unsigned long last_update;
 unsigned long lastMeasure;
 unsigned long newMeasure;
+
 int delayval = 100; 
+
 const char* ssid = "181BayCRETech";
 const char* password = "LetsGoRaptors!";
 const char* mqttServer = "192.168.0.11";
@@ -43,7 +48,6 @@ const int mqttPort = 1883;
 const char* clientName = "DeskNode2";
 const char* subscribeTopic = "Status/DeskNode2";
 const char* publishTopic = "Desks/DeskNode2";
-const char* clientName = "DeskNode8";
 const char* topic_pub = "Desks/DeskNode8";    //write to this topic
 const char* topic_pub2 = "Desks/DeskNode8req";    //write to this topic
 const char* topic_sub = "Desks/DeskNode8/sub";  //listen to this topic
@@ -191,55 +195,6 @@ void callback(char* topic, byte* payload, unsigned int length2){
 }
 
 
-/*****************checks for speed of measurements******************************************************/
-unsigned long msDifference(){
-  
-  int timeDiff = newMeasure-lastMeasure;
-  return timeDiff;
-}
-
-void setup() {
-  pinMode(trigPin1, OUTPUT); // Sets the trigPin as an Output
-  pinMode(echoPin1, INPUT); // Sets the echoPin as an Input
-  pinMode(trigPin2, OUTPUT); // Sets the trigPin as an Output
-  pinMode(echoPin2, INPUT); // Sets the echoPin as an Input
-  Serial.begin(115200);
-  
-  ConnectWifi(ssid,password);
-  client.setServer(mqttServer,mqttPort);
-  ConnectBroker(client, clientName);
-  client.setCallback(callback);
-  client.subscribe(subscribeTopic);
-  // (timezone, daylight offset in seconds, server1, server2)
-  // 3*3600 as setTimezone function converts seconds to hours
-  configTime(3 * 3600, 0, "pool.ntp.org", "time.nist.gov");
-  lastMeasure = millis();
-  ////////////
-
-
-  
-   Serial.println("\nWaiting for time");
-  while (!time(nullptr)) {
-    Serial.print(".");
-    delay(250);
-  }
-  Serial.println("Configured time.");
-
-  ///
-    /// Don't know why but it disconnects often without multiple client.loop() even with increased keepalive time
-  ///
-  client.loop();
-    delay(2000);
-    Serial.println("Getting current time");
-    client.loop();
-      sendStartupMessage();
-    client.loop();
-      Serial.print("Getting Baseline");
-      makeBaseline();
-      client.loop();
-
-
-
 
 void sendStartupMessage(){
   
@@ -259,28 +214,12 @@ void sendStartupMessage(){
 }
 
 
-
-
-void loop() {
-  if (!client.connected()) {
-    reconnect();
-    client.subscribe(subscribeTopic);
-  }
-
-  checkHeight();
-  client.loop();
-  delay(10);
-
-}
-
-
 void checkHeight() {
   if (!lastHeight) {
     lastHeight = baseline;
   }
   int newHeight = getHeight();
-  if(passesSpeedCheck(newHeight,lastHeight)){
-    if (abs(newHeight - lastHeight) >= threshold) {
+    if (abs(newHeight - lastHeight) >= movementThreshold) {
       Serial.println("**********Sending*********");
       Serial.println("old: ");
       Serial.println(lastHeight);
@@ -296,23 +235,14 @@ void checkHeight() {
     }
       lastMeasure = newMeasure;
 
-  }
-}
-
-boolean passesSpeedCheck(int newHeight, int oldHeight){
-  float distance = abs(newHeight-oldHeight);
-  float timeDiff = msDifference();
-  float dt = 1000*(distance/timeDiff);
-    return dt<deskSpeed;
   
 }
 
 
 void makeBaseline() {
   int total = 0;
-  int baseSize = 3;
   RunningMedian measurements = RunningMedian(5);
-  for (int i = 0; i < baseSize; i++) {
+  for (int i = 0; i < baselineSize; i++) {
     measurements.add(getHeight());
   }
   baseline = measurements.getMedian();
@@ -340,10 +270,10 @@ StaticJsonBuffer<300> JSONbuffer;
 int getHeight() {
   int realDistance;
 
-  RunningMedian measurements = RunningMedian(5);
+  RunningMedian measurements = RunningMedian(heightCheckSize);
 
   // Clears the trigPin
-  for (int i = 0; i < 5; i++) {
+  for (int i = 0; i < heightCheckSize; i++) {
     
     digitalWrite(trigPin1, LOW);
     digitalWrite(trigPin2, LOW);
@@ -389,7 +319,7 @@ int getHeight() {
   
     newMeasure = millis();
   
-  delay(250);
+  delay(150);
   return realDistance;
 }
 
@@ -453,10 +383,6 @@ void setup() {
       Serial.print("Getting Baseline");
       makeBaseline();
       client.loop();
- 
-
-
-  
 }
 
 void loop() {
@@ -469,6 +395,6 @@ void loop() {
   client.loop();
   delay(10);
 
-  client.publish(publishTopic, JSONmessageBuffer, false);
+//  client.publish(publishTopic, JSONmessageBuffer, false);
 }
 
