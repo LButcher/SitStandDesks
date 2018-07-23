@@ -32,7 +32,8 @@ int newHeight;
 int heightCheckSize = 11;
 int chunkSize = 7;
 RunningMedian recordedHeights = RunningMedian(chunkSize);
-
+//How much the measurements in each chunk are allowed to differ to still be considered constant
+int chunkThreshold = 5;
 
 
 unsigned long connect_time;
@@ -202,6 +203,12 @@ void loop() {
 }
 
 
+boolean measurementsWithinRange(){
+  int maxVal = recordedHeights.getHighest();
+  int minVal = recordedHeights.getLowest();
+  int diff = maxVal-minVal;
+  return diff<chunkThreshold;
+}
 
 void checkHeight() {
   if (!prevHeight) {
@@ -210,7 +217,8 @@ void checkHeight() {
   for(int i = 0; i<chunkSize;i++){
     recordedHeights.add(getHeight());
   }
-  int newHeight = recordedHeights.getMedian();
+    if(measurementsWithinRange()){
+        int newHeight = recordedHeights.getMedian();
     if (abs(newHeight - prevHeight) >= movementThreshold) {
       Serial.println("**********Sending*********");
       Serial.println("old: ");
@@ -221,7 +229,7 @@ void checkHeight() {
       sendHeight(prevHeight, newHeight);
       prevHeight = newHeight;
       }
-
+    }
   
 }
 
