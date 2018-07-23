@@ -24,7 +24,6 @@ int distance1;
 int distance2;
 
 int movementThreshold = 10;
-
 int baseline;
 int baselineSize = 7;
 int prevHeight;
@@ -48,9 +47,9 @@ const int mqttPort = 1883;
 
 //EDIT THESE 3 VALUES
 const char* clientName = "DeskNode2";
-const char* topic_pub = "Desks/DeskNode2";    //write to this topic
-const char* topic_request_pub = "Desks/DeskNode2req";    //write to this topic
-const char* topic_sub = "Desks/DeskNode2/sub";  //listen to this topic
+const char* topic_pub = "DesksTEST/DeskNode2";    //write to this topic
+const char* topic_request_pub = "DesksTEST/DeskNode2req";    //write to this topic
+const char* topic_sub = "DesksTEST/DeskNode2/sub";  //listen to this topic
 
 WiFiClient espClient;         //wifi client
 PubSubClient client(espClient); //MQTT client requires wifi client
@@ -333,41 +332,20 @@ void callback(char* topic, byte* payload, unsigned int length2){
     JSONencoder["previousRecordedHeight"] = prevHeight;
     char JSONmessageBuffer[100];
     JSONencoder.printTo(JSONmessageBuffer, sizeof(JSONmessageBuffer));
-    client.publish(topic_pub, JSONmessageBuffer);
-  }
-         
-  if (strcmp(topic,"Desks/DeskNode8/sub")==0)
-  {
-      Serial.print("Message arrived in topic: ");
-      Serial.println(topic);
-      Serial.print("Message: ");
-      
-      for(int i = 0; i<length2;i++){
-      Serial.print((char)payload[i]);
-      }
-      Serial.println ("");
-    
-       payload[length2] = 0;
-    
-        StaticJsonBuffer<300> JSONbuffer; 
-        String inData = String((char*)payload);
-        JsonObject& root = JSONbuffer.parseObject(inData);
-      
-      String request = root["system"];
-    
-      if(request == "diagnostics"){
-        Serial.println("-----Getting Diagnostic Data--------");
-        JsonObject& JSONencoder = JSONbuffer.createObject();
-        JSONencoder["ID"] = clientName;
-        JSONencoder["Connected"] = connect_time;
-        JSONencoder["LastUpdate"] = last_update;
-        JSONencoder["WiFiSig"] = WiFi.RSSI();
-        JSONencoder["Height"] = getHeight();
-        char JSONmessageBuffer[300];
-        JSONencoder.printTo(JSONmessageBuffer, sizeof(JSONmessageBuffer));
-        client.publish(topic_request_pub, JSONmessageBuffer);
-        Serial.println(JSONmessageBuffer);
-      }
-  }       
+    client.publish(topic_request_pub, JSONmessageBuffer);
+  }           
+  if(request == "diagnostics"){
+    Serial.println("-----Getting Diagnostic Data--------");
+    JsonObject& JSONencoder = JSONbuffer.createObject();
+    JSONencoder["ID"] = clientName;
+    JSONencoder["Connected"] = connect_time;
+    JSONencoder["LastUpdate"] = last_update;
+    JSONencoder["WiFiSig"] = WiFi.RSSI();
+    JSONencoder["Height"] = getHeight();
+    char JSONmessageBuffer[300];
+    JSONencoder.printTo(JSONmessageBuffer, sizeof(JSONmessageBuffer));
+    client.publish(topic_request_pub, JSONmessageBuffer);
+    Serial.println(JSONmessageBuffer);
+      }       
 }
 
