@@ -9,6 +9,7 @@
 
 
 #define MQTT_KEEPALIVE 60
+#define MQTT_MAX_PACKET_SIZE 512
 
 
 /************************Define Pins***************************/
@@ -46,10 +47,10 @@ const char* mqttServer = "192.168.0.11";
 const int mqttPort = 1883;
 
 //EDIT THESE 3 VALUES
-const char* clientName = "DeskNode2";
-const char* topic_pub = "DesksTEST/DeskNode2";    //write to this topic
-const char* topic_request_pub = "DesksTEST/DeskNode2req";    //write to this topic
-const char* topic_sub = "DesksTEST/DeskNode2/sub";  //listen to this topic
+const char* clientName = "DeskNode11";
+const char* topic_pub = "DesksTEST/DeskNode11";    //write to this topic
+const char* topic_request_pub = "DesksTEST/requests";    //write to this topic
+const char* topic_sub = "DesksTEST/DeskNode11/sub";  //listen to this topic
 
 WiFiClient espClient;         //wifi client
 PubSubClient client(espClient); //MQTT client requires wifi client
@@ -111,9 +112,9 @@ void reconnect() {
     } else {
       Serial.print("failed, rc=");
       Serial.print(client.state());
-      Serial.println(" try again in 5 seconds");
-      // Wait 5 seconds before retrying
-      delay(5000);
+      Serial.println(" trying again in 3 seconds");
+      // Wait 3 seconds before retrying
+      delay(3000);
     }
   }
 }
@@ -195,8 +196,12 @@ void loop() {
     reconnect();
     client.subscribe(topic_sub);
   }
+  
+  client.loop();
 
   checkHeight();
+  Serial.println("Height: ");
+  Serial.println(recordedHeights.getMedian());
   client.loop();
   delay(10);
 }
@@ -263,10 +268,10 @@ int getHeight() {
     distance1 = duration1 * 0.034 / 2;
     distance2 = duration2 * 0.034 / 2;
     // Prints the distance on the Serial Monitor
-    Serial.println("dist1");
-    Serial.println(distance1);
-    Serial.println("dist2");
-    Serial.println(distance2);
+    //Serial.println("dist1");
+    //Serial.println(distance1);
+    //Serial.println("dist2");
+    //Serial.println(distance2);
 
     if (distance1 >= distance2) {
       realDistance = distance1;
