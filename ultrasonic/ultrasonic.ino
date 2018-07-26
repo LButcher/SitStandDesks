@@ -140,7 +140,7 @@ void setup() {
   
   // (timezone, daylight offset in seconds, server1, server2)
   // 3*3600 as setTimezone function converts seconds to hours
-  configTime(3 * 3600, 0, "pool.ntp.org", "time.nist.gov");
+  configTime(0, 0, "pool.ntp.org", "time.nist.gov");
 
 
 
