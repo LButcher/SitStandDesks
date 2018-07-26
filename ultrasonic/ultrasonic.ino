@@ -374,6 +374,14 @@ void updateFirmware(){
             case HTTP_UPDATE_OK:
                 Serial.println("HTTP_UPDATE_OK");
                 break;
+
+            case HTTP_UPDATE_NO_UPDATES:
+                Serial.println("NO UPDATES");
+                break;
+
+           default:
+              Serial.println("Something else...");
+              break;
         }
 }
 
