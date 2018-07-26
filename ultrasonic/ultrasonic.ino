@@ -129,7 +129,7 @@ void setup() {
   pinMode(echoPin2, INPUT); // Sets the echoPin as an Input
   Serial.begin(115200);
 
-  Serial.println("UPDATED 2");
+  Serial.println("UPDATED 3");
   
   setup_wifi();
   client.setServer(mqttServer,mqttPort);
