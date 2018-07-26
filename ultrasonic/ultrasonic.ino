@@ -128,6 +128,8 @@ void setup() {
   pinMode(trigPin2, OUTPUT); // Sets the trigPin as an Output
   pinMode(echoPin2, INPUT); // Sets the echoPin as an Input
   Serial.begin(115200);
+
+  Serial.println("UPDATED");
   
   setup_wifi();
   client.setServer(mqttServer,mqttPort);
@@ -363,7 +365,7 @@ void updateFirmware(){
   
   t_httpUpdate_return ret = ESPhttpUpdate.update("http://99.231.14.167/update.bin");
         //t_httpUpdate_return  ret = ESPhttpUpdate.update("https://server/file.bin");
-
+      Serial.println(ret);
         switch(ret) {
             case HTTP_UPDATE_FAILED:
                 Serial.printf("HTTP_UPDATE_FAILD Error (%d): %s", ESPhttpUpdate.getLastError(), ESPhttpUpdate.getLastErrorString().c_str());
