@@ -5,6 +5,8 @@
 #include <ArduinoJson.h>
 #include <ESP8266WiFi.h>
 #include <PubSubClient.h>
+#include <ESP8266HTTPClient.h>
+#include <ESP8266httpUpdate.h>
 
 
 
@@ -339,7 +341,7 @@ void callback(char* topic, byte* payload, unsigned int length2){
     JSONencoder.printTo(JSONmessageBuffer, sizeof(JSONmessageBuffer));
     client.publish(topic_request_pub, JSONmessageBuffer);
   }           
-  if(request == "diagnostics"){
+  else if(request == "diagnostics"){
     Serial.println("-----Getting Diagnostic Data--------");
     JsonObject& JSONencoder = JSONbuffer.createObject();
     JSONencoder["ID"] = clientName;
@@ -351,6 +353,25 @@ void callback(char* topic, byte* payload, unsigned int length2){
     JSONencoder.printTo(JSONmessageBuffer, sizeof(JSONmessageBuffer));
     client.publish(topic_request_pub, JSONmessageBuffer);
     Serial.println(JSONmessageBuffer);
-      }       
+      } 
+   else if (request == "update available"){
+    updateFirmware();      
+   }
+}
+
+void updateFirmware(){
+  
+  t_httpUpdate_return ret = ESPhttpUpdate.update("http://99.231.14.167/update.bin");
+        //t_httpUpdate_return  ret = ESPhttpUpdate.update("https://server/file.bin");
+
+        switch(ret) {
+            case HTTP_UPDATE_FAILED:
+                Serial.printf("HTTP_UPDATE_FAILD Error (%d): %s", ESPhttpUpdate.getLastError(), ESPhttpUpdate.getLastErrorString().c_str());
+                break;
+                
+            case HTTP_UPDATE_OK:
+                Serial.println("HTTP_UPDATE_OK");
+                break;
+        }
 }
 
