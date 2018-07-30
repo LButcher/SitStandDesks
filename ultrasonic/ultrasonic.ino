@@ -371,7 +371,7 @@ void callback(char* topic, byte* payload, unsigned int length2){
     client.publish(topic_request_pub, JSONmessageBuffer);
     Serial.println(JSONmessageBuffer);
       } 
-   else if (request == "update available"){
+   else if (request == "update"){
     updateFirmware();      
    }
 }
