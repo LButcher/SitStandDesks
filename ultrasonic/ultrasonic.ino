@@ -49,10 +49,10 @@ const char* mqttServer = "192.168.0.11";
 const int mqttPort = 1883;
 
 //EDIT THESE 3 VALUES
-const char* clientName = "DeskNode2";
-const char* topic_pub = "Desks/DeskNode2";    //write to this topic
-const char* topic_request_pub = "DesksTEST/requests";    //write to this topic
-const char* topic_sub = "DesksTEST/DeskNode2/sub";  //listen to this topic
+const char* clientName = "DeskNode5";
+const char* topic_pub = "Desks/DeskNode5";    //write to this topic
+const char* topic_request_pub = "Desks/requests";    //write to this topic
+const char* topic_sub = "Desks/DeskNode5/sub";  //listen to this topic
 
 WiFiClient espClient;         //wifi client
 PubSubClient client(espClient); //MQTT client requires wifi client
