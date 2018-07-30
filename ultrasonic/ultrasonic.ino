@@ -31,7 +31,7 @@ int baseline;
 int baselineSize = 13;
 int prevHeight;
 int newHeight;
-int heightCheckSize = 21;
+int heightCheckSize = 99;
 int chunkSize = 7;
 RunningMedian recordedHeights = RunningMedian(chunkSize);
 //How much the measurements in each chunk are allowed to differ to still be considered constant
@@ -207,7 +207,7 @@ void loop() {
   Serial.println("Height: ");
   Serial.println(recordedHeights.getMedian());
   client.loop();
-  delay(10);
+  delay(5000);
 }
 
 
