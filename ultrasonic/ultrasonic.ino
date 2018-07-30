@@ -140,7 +140,7 @@ void setup() {
   pinMode(echoPin2, INPUT); // Sets the echoPin as an Input
   Serial.begin(115200);
 
-  Serial.println("UPDATED 6");
+  Serial.println("UPDATED 7");
   
   setup_wifi();
   client.setServer(mqttServer,mqttPort);
@@ -189,6 +189,7 @@ void makeBaseline() {
   Serial.println(baseline); 
 }
 
+//To universal Topic
 void sendStartupMessage(){
   
   time_t now = time(nullptr);
@@ -203,6 +204,7 @@ void sendStartupMessage(){
   char JSONmessageBuffer[100];
   JSONencoder.printTo(JSONmessageBuffer, sizeof(JSONmessageBuffer));
   client.publish(topic_pub, JSONmessageBuffer, false);
+  
 }
 
 
