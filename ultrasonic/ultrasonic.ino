@@ -52,7 +52,7 @@ const int mqttPort = 1883;
 const char* clientName = "DeskNode5";
 const char* topic_pub = "Desks/DeskNode5";    //write to this topic
 const char* topic_request_pub = "Desks/requests";    //write to this topic
-const char* topic_sub = "Desks/DeskNode5/sub";  //listen to this topic
+const char* topic_sub = "Desks/sub";  //listen to this topic
 
 WiFiClient espClient;         //wifi client
 PubSubClient client(espClient); //MQTT client requires wifi client
