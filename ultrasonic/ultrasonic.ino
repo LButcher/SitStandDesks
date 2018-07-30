@@ -28,14 +28,14 @@ int distance2;
 
 int movementThreshold = 10;
 int baseline;
-int baselineSize = 7;
+int baselineSize = 13;
 int prevHeight;
 int newHeight;
-int heightCheckSize = 11;
+int heightCheckSize = 21;
 int chunkSize = 7;
 RunningMedian recordedHeights = RunningMedian(chunkSize);
 //How much the measurements in each chunk are allowed to differ to still be considered constant
-int chunkThreshold = 5;
+int chunkThreshold = 10;
 
 
 unsigned long connect_time;
@@ -43,16 +43,16 @@ unsigned long last_update;
 
 int delayval = 100; 
 
-const char* ssid = "181BayCRETech";
-const char* password = "LetsGoRaptors!";
+const char* ssid = "121King5_GOOD";
+const char* password = "BronBronIn7";
 const char* mqttServer = "192.168.0.11";
 const int mqttPort = 1883;
 
 //EDIT THESE 3 VALUES
-const char* clientName = "DeskNode11";
-const char* topic_pub = "DesksTEST/DeskNode11";    //write to this topic
+const char* clientName = "DeskNode2";
+const char* topic_pub = "Desks/DeskNode2";    //write to this topic
 const char* topic_request_pub = "DesksTEST/requests";    //write to this topic
-const char* topic_sub = "DesksTEST/DeskNode11/sub";  //listen to this topic
+const char* topic_sub = "DesksTEST/DeskNode2/sub";  //listen to this topic
 
 WiFiClient espClient;         //wifi client
 PubSubClient client(espClient); //MQTT client requires wifi client
@@ -191,7 +191,7 @@ void sendStartupMessage(){
   JSONencoder["startuptime"] = now;
   char JSONmessageBuffer[100];
   JSONencoder.printTo(JSONmessageBuffer, sizeof(JSONmessageBuffer));
-  client.publish(topic_request_pub, JSONmessageBuffer, false);
+  client.publish(topic_pub, JSONmessageBuffer, false);
 }
 
 
