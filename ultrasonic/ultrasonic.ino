@@ -28,11 +28,11 @@ int distance2;
 
 int movementThreshold = 10;
 int baseline;
-int baselineSize = 13;
+int baselineSize = 15;
 int prevHeight;
 int newHeight;
 int heightCheckSize = 99;
-int chunkSize = 7;
+int chunkSize = 9;
 RunningMedian recordedHeights = RunningMedian(chunkSize);
 //How much the measurements in each chunk are allowed to differ to still be considered constant
 int chunkThreshold = 10;
@@ -222,7 +222,7 @@ void loop() {
   client.loop();
   Serial.println("Client ID: ");
   Serial.println(clientName);
-  delay(5000);
+  delay(10000);
 }
 
 
