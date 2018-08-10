@@ -31,11 +31,11 @@ int baseline;
 int baselineSize = 15;
 int prevHeight;
 int newHeight;
-int heightCheckSize = 99;
+int heightCheckSize = 21;
 int chunkSize = 9;
 RunningMedian recordedHeights = RunningMedian(chunkSize);
 //How much the measurements in each chunk are allowed to differ to still be considered constant
-int chunkThreshold = 10;
+int chunkThreshold = 15;
 
 
 unsigned long connect_time;
