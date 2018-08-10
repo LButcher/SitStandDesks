@@ -54,6 +54,8 @@ const char* topic_pub = "Desks/pub";    //write to this topic
 const char* topic_request_pub = "Desks/requests";    //write to this topic
 const char* topic_sub = "Desks/sub";  //listen to this topic
 
+String gitCommitID = "";
+
 String topicString;
 char topicChar[18];
 
