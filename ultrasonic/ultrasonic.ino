@@ -31,11 +31,11 @@ int baseline;
 int baselineSize = 15;
 int prevHeight;
 int newHeight;
-int heightCheckSize = 21;
-int chunkSize = 9;
+int heightCheckSize = 7;
+int chunkSize = 5;
 RunningMedian recordedHeights = RunningMedian(chunkSize);
 //How much the measurements in each chunk are allowed to differ to still be considered constant
-int chunkThreshold = 15;
+int chunkThreshold = 10;
 
 
 unsigned long connect_time;
@@ -45,7 +45,7 @@ int delayval = 100;
 
 const char* ssid = "121King5_GOOD";
 const char* password = "BronBronIn7";
-const char* mqttServer = "192.168.0.15";
+const char* mqttServer = "192.168.0.19";
 const int mqttPort = 1883;
 
 //EDIT THESE 3 VALUES
@@ -224,6 +224,11 @@ void loop() {
   client.loop();
   Serial.println("Client ID: ");
   Serial.println(clientName);
+  Serial.println("old height: ");
+  Serial.println(prevHeight);
+  Serial.println("new height: ");
+  Serial.println(newHeight);
+  
   delay(10000);
 }
 
@@ -307,6 +312,7 @@ int getHeight() {
 
    
   delay(150);
+  Serial.println(realDistance);
   return realDistance;
 }
 
