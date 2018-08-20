@@ -298,7 +298,7 @@ int getHeight() {
     //Serial.println(distance1);
     //Serial.println("dist2");
     //Serial.println(distance2);
-
+/*
     if (distance1 >= distance2) {
       realDistance = distance1;
     }
@@ -306,7 +306,10 @@ int getHeight() {
       realDistance = distance2;
     }
     measurements.add(realDistance);
+    */
   }
+
+    measurements.add(distance1);
 
   realDistance = measurements.getMedian();
 
