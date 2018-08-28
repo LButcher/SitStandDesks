@@ -36,7 +36,8 @@ const char* ssid = "CNN";
 const char* password = "Co!!eenandNei!";
 const char* mqttServer = "192.168.1.13";
 const int mqttPort = 1883;
-const char* clientName = "DeskNode8";
+//const char* clientName = "DeskNode8";
+char clientName[18];
 const char* topic_pub = "Desks/DeskNode8";    //write to this topic
 const char* topic_pub2 = "Desks/DeskNode8req";    //write to this topic
 const char* topic_sub = "Desks/DeskNode8/sub";  //listen to this topic
@@ -346,11 +347,11 @@ void sendHeight(int oldHeight, int newHeight) {
   last_update = time(nullptr);
   StaticJsonBuffer<300> JSONbuffer;
   JsonObject& JSONencoder = JSONbuffer.createObject();
-  JSONencoder["id"] = clientName;
-  JSONencoder["oldheight"] = oldHeight;
-  JSONencoder["newheight"] = newHeight;
-  JSONencoder["time"] = time(nullptr);
-  JSONencoder["mscounter"] = newMeasure;
+  JSONencoder["Id"] = clientName;
+  JSONencoder["Oldheight"] = oldHeight;
+  JSONencoder["Newheight"] = newHeight;
+  JSONencoder["Time"] = time(nullptr);
+  JSONencoder["Mscounter"] = newMeasure;
   char JSONmessageBuffer[200];
   JSONencoder.printTo(JSONmessageBuffer, sizeof(JSONmessageBuffer));
 
@@ -368,6 +369,12 @@ void setup() {
   
   setup_wifi();
 
+  //clientName = "DeskNode8";
+  //const char* clientName[10];
+  String clientMac = WiFi.macAddress();
+  clientMac.toCharArray(clientName,18);
+  
+  
   client.setServer(mqttServer,mqttPort);
   ConnectBroker(client, clientName);    //connect to MQTT borker
   client.setCallback(callback);
