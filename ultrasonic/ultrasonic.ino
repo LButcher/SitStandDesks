@@ -7,6 +7,7 @@
 #include <PubSubClient.h>
 #include <ESP8266HTTPClient.h>
 #include <ESP8266httpUpdate.h>
+#include <WiFiConnect.h>
 
 
 
@@ -16,23 +17,26 @@
 
 /************************Define Pins***************************/
 // defines pins numbers
-const int trigPin1 = D8;
-const int echoPin1 = D7;  
-const int trigPin2 = D6;
-const int echoPin2 = D5;
+const int trigPin1 = D4;
+const int echoPin1 = D3;  
+//const int trigPin2 = D6;
+//const int echoPin2 = D5;
 /*********************** Global Variables***************************/
 long duration1;
-long duration2;
+//long duration2;
 int distance1;
-int distance2;
+//int distance2;
 
-int movementThreshold = 10;
+int movementThreshold = 6;
 int baseline;
 int baselineSize = 15;
-int prevHeight;
-int newHeight;
+int prevHeight =0;
+int newHeight =0;
 int heightCheckSize = 7;
 int chunkSize = 5;
+int max_height = 300;
+int min_height = 5;
+
 RunningMedian recordedHeights = RunningMedian(chunkSize);
 //How much the measurements in each chunk are allowed to differ to still be considered constant
 int chunkThreshold = 10;
@@ -43,9 +47,9 @@ unsigned long last_update;
 
 int delayval = 100; 
 
-const char* ssid = "121King5_GOOD";
-const char* password = "BronBronIn7";
-const char* mqttServer = "192.168.0.19";
+//const char* ssid = "121King5_GOOD";
+//const char* password = "BronBronIn7";
+//const char* mqttServer = "192.168.0.19";
 const int mqttPort = 1883;
 
 //EDIT THESE 3 VALUES
@@ -73,9 +77,7 @@ void setup_wifi() {
   Serial.println();
   Serial.print("Connecting to ");
   Serial.println(ssid);
-
   WiFi.begin(ssid, password);
-
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
     Serial.print(".");
@@ -89,8 +91,7 @@ void setup_wifi() {
   Serial.print("RSSI:");
   Serial.println(rssi);
 
-  topicString = WiFi.macAddress();
-  
+  topicString = WiFi.macAddress();          //sets up the unique clientName using the MacAddress
   topicString.toCharArray(topicChar, 18);
   clientName = topicChar;
   Serial.println(topicChar);
@@ -138,27 +139,22 @@ void reconnect() {
 void setup() {
   pinMode(trigPin1, OUTPUT); // Sets the trigPin as an Output
   pinMode(echoPin1, INPUT); // Sets the echoPin as an Input
-  pinMode(trigPin2, OUTPUT); // Sets the trigPin as an Output
-  pinMode(echoPin2, INPUT); // Sets the echoPin as an Input
+//  pinMode(trigPin2, OUTPUT); // Sets the trigPin as an Output
+//  pinMode(echoPin2, INPUT); // Sets the echoPin as an Input
   Serial.begin(115200);
-
   Serial.println("UPDATED 7");
   
   setup_wifi();
   client.setServer(mqttServer,mqttPort);
   ConnectBroker(client, clientName);    //connect to MQTT borker
-  client.setCallback(callback);
-  client.subscribe(topic_sub);   
+  client.setCallback(callback);         //Listener function
+  client.subscribe(topic_sub);          //Topics to subscribe to
 
   
   // (timezone, daylight offset in seconds, server1, server2)
   // 3*3600 as setTimezone function converts seconds to hours
   configTime(0, 0, "pool.ntp.org", "time.nist.gov");
-
-
-
-  
-   Serial.println("\nWaiting for time");
+  Serial.println("\nWaiting for time");
   while (!time(nullptr)) {
     Serial.print(".");
     delay(250);
@@ -179,10 +175,10 @@ void setup() {
       makeBaseline();
       client.loop();
 }
-
+/***************Baseline Measurements******************************************************/
 void makeBaseline() {
   int total = 0;
-  RunningMedian measurements = RunningMedian(baselineSize);
+  RunningMedian measurements = RunningMedian(baselineSize);   //takes number of measurements defined above and returns median
   for (int i = 0; i < baselineSize; i++) {
     measurements.add(getHeight());
   }
@@ -191,6 +187,7 @@ void makeBaseline() {
   Serial.println(baseline); 
 }
 
+/***************Startup Message - sent on bootup connection******************************************************/
 //To universal Topic
 void sendStartupMessage(){
   
@@ -199,7 +196,7 @@ void sendStartupMessage(){
   Serial.println("Time is now: ");
   Serial.println(now);
   
-  StaticJsonBuffer<100> JSONbuffer;
+  StaticJsonBuffer<100> JSONbuffer;            //Creates JSON message
   JsonObject& JSONencoder = JSONbuffer.createObject();
   JSONencoder["id"] = clientName;
   JSONencoder["startuptime"] = now;
@@ -209,7 +206,7 @@ void sendStartupMessage(){
   
 }
 
-
+/***************Loop - Main Function******************************************************/
 void loop() {
   if (!client.connected()) {
     reconnect();
@@ -232,38 +229,47 @@ void loop() {
   delay(10000);
 }
 
-
+/***************Validates Range of measurement******************************************************/
 boolean measurementsWithinRange(){
   int maxVal = recordedHeights.getHighest();
   int minVal = recordedHeights.getLowest();
-  int diff = maxVal-minVal;
-  return diff<chunkThreshold;
+  int diff = maxVal-minVal;           //checks for a maximum distance change between readings
+  bool test = false;
+
+  if (diff < chunkThreshold){
+    if (recordedHeights.getMedian() < max_height && recordedHeights.getMedian() > min_height)   //checks to make sure reading is withing limits
+      test = true;
+  }
+  
+  return test;   //return if diff is less than the chunkthreshold
 }
 
+/***************Check Height******************************************************/
 void checkHeight() {
   if (!prevHeight) {
-    prevHeight = baseline;
+    prevHeight = baseline;       //on first measurement use baseline
   }
   for(int i = 0; i<chunkSize;i++){
     recordedHeights.add(getHeight());
   }
     if(measurementsWithinRange()){
-        int newHeight = recordedHeights.getMedian();
-    if (abs(newHeight - prevHeight) >= movementThreshold) {
+        newHeight = recordedHeights.getMedian();
+    if (abs(newHeight - prevHeight) >= movementThreshold) { //if the movement is greater than the threshold there is a new height
       Serial.println("**********Sending*********");
       Serial.println("old: ");
       Serial.println(prevHeight);
       Serial.println("new: ");
       Serial.println(newHeight);
       
-      sendHeight(prevHeight, newHeight);
+      //sendHeight(prevHeight, newHeight);
+      sendHeight();
       prevHeight = newHeight;
       }
     }
   
 }
 
-
+/***************Get Height******************************************************/
 int getHeight() {
   int realDistance;
 
@@ -273,26 +279,26 @@ int getHeight() {
   for (int i = 0; i < heightCheckSize; i++) {
     
     digitalWrite(trigPin1, LOW);
-    digitalWrite(trigPin2, LOW);
+    //digitalWrite(trigPin2, LOW);
     delayMicroseconds(2);
     // Sets the trigPin on HIGH state for 10 micro seconds
     digitalWrite(trigPin1, HIGH);
     delayMicroseconds(10);
     digitalWrite(trigPin1, LOW);
-    duration1 = pulseIn(echoPin1, HIGH);
+    duration1 = pulseIn(echoPin1, HIGH);    //echo pin changes to HIGH when pulse is read - duration measures time
 
     delayMicroseconds(10);
 
 
-    digitalWrite(trigPin2, HIGH);
-    delayMicroseconds(10);
-    digitalWrite(trigPin2, LOW);
+ //   digitalWrite(trigPin2, HIGH);
+ //   delayMicroseconds(10);
+ //   digitalWrite(trigPin2, LOW);
     // Reads the echoPin, returns the sound wave travel time in microseconds
-    duration2 = pulseIn(echoPin2, HIGH);
+ //   duration2 = pulseIn(echoPin2, HIGH);
 
     // Calculating the distance
     distance1 = duration1 * 0.034 / 2;
-    distance2 = duration2 * 0.034 / 2;
+//    distance2 = duration2 * 0.034 / 2;
     // Prints the distance on the Serial Monitor
     //Serial.println("dist1");
     //Serial.println(distance1);
@@ -307,27 +313,29 @@ int getHeight() {
     }
     measurements.add(realDistance);
     */
-  }
 
     measurements.add(distance1);
+    delay(150);
+  }
 
   realDistance = measurements.getMedian();
 
    
-  delay(150);
+  
   Serial.println(realDistance);
   return realDistance;
 }
+/***************send Height******************************************************/
 
-void sendHeight(int oldHeight, int newHeight) {
-  
+//void sendHeight(int oldHeight, int newHeight) {
+void sendHeight() {  
   last_update = time(nullptr);
   StaticJsonBuffer<300> JSONbuffer;
   JsonObject& JSONencoder = JSONbuffer.createObject();
-  JSONencoder["id"] = clientName;
-  JSONencoder["oldheight"] = oldHeight;
-  JSONencoder["newheight"] = newHeight;
-  JSONencoder["time"] = time(nullptr);
+  JSONencoder["Id"] = clientName;
+  JSONencoder["Oldheight"] = prevHeight;
+  JSONencoder["Newheight"] = newHeight;
+  JSONencoder["Time"] = time(nullptr);
   char JSONmessageBuffer[200];
   JSONencoder.printTo(JSONmessageBuffer, sizeof(JSONmessageBuffer));
 
@@ -349,17 +357,12 @@ void callback(char* topic, byte* payload, unsigned int length2){
 
   Serial.println();
   Serial.println("-------------");
-
-   
-
   payload[length2] = 0;
-
-    StaticJsonBuffer<300> JSONbuffer; 
-    String inData = String((char*)payload);
-    JsonObject& root = JSONbuffer.parseObject(inData);
+  StaticJsonBuffer<300> JSONbuffer; 
+  String inData = String((char*)payload);
+  JsonObject& root = JSONbuffer.parseObject(inData);
   
   String request = root["details"];
-
   if(request == "height"){
   
     JsonObject& JSONencoder = JSONbuffer.createObject();
@@ -387,10 +390,13 @@ void callback(char* topic, byte* payload, unsigned int length2){
    }
 }
 
+/*****************Firmware Upate******************************************************/
+
 void updateFirmware(){
   
-  t_httpUpdate_return ret = ESPhttpUpdate.update("http://99.231.14.167/update.bin");
-        //t_httpUpdate_return  ret = ESPhttpUpdate.update("https://server/file.bin");
+ // t_httpUpdate_return ret = ESPhttpUpdate.update("http://99.231.14.167/update");
+    t_httpUpdate_return ret = ESPhttpUpdate.update("http://nj2299.duckdns.org/update");
+
       Serial.println(ret);
         switch(ret) {
             case HTTP_UPDATE_FAILED:
